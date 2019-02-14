@@ -68,6 +68,12 @@ struct MetadataPhoneNumberDesc: Decodable {
     let exampleNumber: String?
     let nationalNumberPattern: String?
     let possibleNumberPattern: String?
+    let possibleLengths: MetadataPossibleLengths?
+}
+
+struct MetadataPossibleLengths: Decodable {
+    let national: String?
+    let localOnly: String?
 }
 
 /**

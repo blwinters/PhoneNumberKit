@@ -184,4 +184,14 @@ public final class PhoneNumberKit: NSObject {
         return data
     }
 
+    /// - parameter country: The two-character ISO region code
+    public func maxMobileNationalDigits(forCountry country: String) -> Int? {
+      guard let territory = metadataManager.filterTerritories(byCountry: country) else { return nil }
+
+      let lengthsAsString = territory.mobile?.possibleLengths?.national ?? ""
+      let stringValues = lengthsAsString.components(separatedBy: ",")
+      let intValues = stringValues.compactMap { Int($0) }
+      return intValues.max()
+    }
+
 }
