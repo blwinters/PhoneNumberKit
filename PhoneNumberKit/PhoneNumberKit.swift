@@ -148,6 +148,59 @@ public final class PhoneNumberKit: NSObject {
         return parseManager.getRegionCode(of: phoneNumber.nationalNumber, countryCode: phoneNumber.countryCode, leadingZero: phoneNumber.leadingZero)
     }
 
+    /// Get an array of possible phone number lengths for the country, as specified by the parameters.
+    ///
+    /// - parameter country: ISO 639 compliant region code.
+    /// - parameter phoneNumberType: PhoneNumberType enum.
+    /// - parameter lengthType: PossibleLengthType enum.
+    ///
+    /// - returns: Array of possible lengths for the country. May be empty.
+    public func possiblePhoneNumberLengths(forCountry country: String, phoneNumberType: PhoneNumberType, lengthType: PossibleLengthType) -> [Int] {
+        guard let territory = metadataManager.filterTerritories(byCountry: country) else { return [] }
+
+        let possibleLengthsList: [MetadataPossibleLengths] = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: phoneNumberType)
+
+        // reduce array into single comma-separated string of length values
+        let nationalLengthsAsString: String = possibleLengthsList.compactMap { $0.national }.reduce("") { $0 + ",\($1)"}
+        let localOnlyLengthsAsString: String = possibleLengthsList.compactMap { $0.localOnly }.reduce("") { $0 + ",\($1)"}
+
+        switch lengthType {
+        case .national:
+            let stringValues = nationalLengthsAsString.components(separatedBy: ",")
+            return stringValues.compactMap { Int($0) }
+        case .localOnly:
+            let stringValues = localOnlyLengthsAsString.components(separatedBy: ",")
+            return stringValues.compactMap { Int($0) }
+        }
+    }
+
+    private func possiblePhoneNumberLengths(forTerritory territory: MetadataTerritory, phoneNumberType: PhoneNumberType) -> [MetadataPossibleLengths] {
+        var lengths: MetadataPossibleLengths?
+
+        switch phoneNumberType {
+        case .fixedLine:        lengths = territory.fixedLine?.possibleLengths
+        case .mobile:           lengths = territory.mobile?.possibleLengths
+        case .fixedOrMobile:
+            let fixedLengths = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: .fixedLine)
+            let mobileLengths = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: .mobile)
+            return fixedLengths + mobileLengths
+
+        case .pager:            lengths = territory.pager?.possibleLengths
+        case .personalNumber:   lengths = territory.personalNumber?.possibleLengths
+        case .premiumRate:      lengths = territory.premiumRate?.possibleLengths
+        case .sharedCost:       lengths = territory.sharedCost?.possibleLengths
+        case .tollFree:         lengths = territory.tollFree?.possibleLengths
+        case .voicemail:        lengths = territory.voicemail?.possibleLengths
+        case .voip:             lengths = territory.voip?.possibleLengths
+        case .uan:              lengths = territory.uan?.possibleLengths
+        case .unknown:          lengths = nil
+        case .notParsed:        lengths = nil
+        }
+
+        guard let possibleLengths = lengths else { return [] }
+        return [possibleLengths]
+    }
+
     // MARK: Class functions
 
     /// Get a user's default region code
@@ -182,16 +235,6 @@ public final class PhoneNumberKit: NSObject {
         }
         let data = try Data(contentsOf: URL(fileURLWithPath: jsonPath))
         return data
-    }
-
-    /// - parameter country: The two-character ISO region code
-    public func maxMobileNationalDigits(forCountry country: String) -> Int? {
-      guard let territory = metadataManager.filterTerritories(byCountry: country) else { return nil }
-
-      let lengthsAsString = territory.mobile?.possibleLengths?.national ?? ""
-      let stringValues = lengthsAsString.components(separatedBy: ",")
-      let intValues = stringValues.compactMap { Int($0) }
-      return intValues.max()
     }
 
 }
