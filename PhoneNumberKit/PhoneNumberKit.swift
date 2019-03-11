@@ -201,6 +201,26 @@ public final class PhoneNumberKit: NSObject {
         return [possibleLengths]
     }
 
+    public func exampleNumber(forCountry country: String, phoneNumberType: PhoneNumberType) -> String? {
+        guard let territory = metadataManager.filterTerritories(byCountry: country) else { return nil }
+
+        switch phoneNumberType {
+        case .fixedLine:        return territory.fixedLine?.exampleNumber
+        case .mobile:           return territory.mobile?.exampleNumber
+        case .fixedOrMobile:    return territory.mobile?.exampleNumber
+        case .pager:            return territory.pager?.exampleNumber
+        case .personalNumber:   return territory.personalNumber?.exampleNumber
+        case .premiumRate:      return territory.premiumRate?.exampleNumber
+        case .sharedCost:       return territory.sharedCost?.exampleNumber
+        case .tollFree:         return territory.tollFree?.exampleNumber
+        case .voicemail:        return territory.voicemail?.exampleNumber
+        case .voip:             return territory.voip?.exampleNumber
+        case .uan:              return territory.uan?.exampleNumber
+        case .unknown:          return nil
+        case .notParsed:        return nil
+        }
+    }
+
     // MARK: Class functions
 
     /// Get a user's default region code
