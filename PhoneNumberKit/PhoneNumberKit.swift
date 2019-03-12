@@ -221,6 +221,10 @@ public final class PhoneNumberKit: NSObject {
         }
     }
 
+  public func nationalPrefixTransformRule(forCountry country: String) -> String? {
+    return metadataManager.filterTerritories(byCountry: country)?.nationalPrefixTransformRule
+  }
+
     // MARK: Class functions
 
     /// Get a user's default region code
