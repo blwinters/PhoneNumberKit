@@ -158,47 +158,58 @@ public final class PhoneNumberKit: NSObject {
     public func possiblePhoneNumberLengths(forCountry country: String, phoneNumberType: PhoneNumberType, lengthType: PossibleLengthType) -> [Int] {
         guard let territory = metadataManager.filterTerritories(byCountry: country) else { return [] }
 
-        let possibleLengthsList: [MetadataPossibleLengths] = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: phoneNumberType)
-
-        // reduce array into single comma-separated string of length values
-        let nationalLengthsAsString: String = possibleLengthsList.compactMap { $0.national }.reduce("") { $0 + ",\($1)"}
-        let localOnlyLengthsAsString: String = possibleLengthsList.compactMap { $0.localOnly }.reduce("") { $0 + ",\($1)"}
+        let possibleLengths = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: phoneNumberType)
 
         switch lengthType {
-        case .national:
-            let stringValues = nationalLengthsAsString.components(separatedBy: ",")
-            return stringValues.compactMap { Int($0) }
-        case .localOnly:
-            let stringValues = localOnlyLengthsAsString.components(separatedBy: ",")
-            return stringValues.compactMap { Int($0) }
+        case .national:     return possibleLengths?.national.flatMap { self.parsePossibleLengths($0) } ?? []
+        case .localOnly:    return possibleLengths?.localOnly.flatMap { self.parsePossibleLengths($0) } ?? []
         }
     }
 
-    private func possiblePhoneNumberLengths(forTerritory territory: MetadataTerritory, phoneNumberType: PhoneNumberType) -> [MetadataPossibleLengths] {
-        var lengths: MetadataPossibleLengths?
-
+    private func possiblePhoneNumberLengths(forTerritory territory: MetadataTerritory, phoneNumberType: PhoneNumberType) -> MetadataPossibleLengths? {
         switch phoneNumberType {
-        case .fixedLine:        lengths = territory.fixedLine?.possibleLengths
-        case .mobile:           lengths = territory.mobile?.possibleLengths
-        case .fixedOrMobile:
-            let fixedLengths = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: .fixedLine)
-            let mobileLengths = possiblePhoneNumberLengths(forTerritory: territory, phoneNumberType: .mobile)
-            return fixedLengths + mobileLengths
-
-        case .pager:            lengths = territory.pager?.possibleLengths
-        case .personalNumber:   lengths = territory.personalNumber?.possibleLengths
-        case .premiumRate:      lengths = territory.premiumRate?.possibleLengths
-        case .sharedCost:       lengths = territory.sharedCost?.possibleLengths
-        case .tollFree:         lengths = territory.tollFree?.possibleLengths
-        case .voicemail:        lengths = territory.voicemail?.possibleLengths
-        case .voip:             lengths = territory.voip?.possibleLengths
-        case .uan:              lengths = territory.uan?.possibleLengths
-        case .unknown:          lengths = nil
-        case .notParsed:        lengths = nil
+        case .fixedLine:        return territory.fixedLine?.possibleLengths
+        case .mobile:           return territory.mobile?.possibleLengths
+        case .pager:            return territory.pager?.possibleLengths
+        case .personalNumber:   return territory.personalNumber?.possibleLengths
+        case .premiumRate:      return territory.premiumRate?.possibleLengths
+        case .sharedCost:       return territory.sharedCost?.possibleLengths
+        case .tollFree:         return territory.tollFree?.possibleLengths
+        case .voicemail:        return territory.voicemail?.possibleLengths
+        case .voip:             return territory.voip?.possibleLengths
+        case .uan:              return territory.uan?.possibleLengths
+        case .fixedOrMobile:    return nil // caller needs to combine results for .fixedLine and .mobile
+        case .unknown:          return nil
+        case .notParsed:        return nil
         }
+    }
 
-        guard let possibleLengths = lengths else { return [] }
-        return [possibleLengths]
+    /// Parse lengths string into array of Int, e.g. "6,[8-10]" becomes [6,8,9,10]
+    private func parsePossibleLengths(_ lengths: String) -> [Int] {
+        let components = lengths.components(separatedBy: ",")
+        let results = components.reduce([Int](), { result, component in
+            let newComponents = parseLengthComponent(component)
+            return result + newComponents
+        })
+
+        return results
+    }
+
+    /// Parses numbers and ranges into array of Int
+    private func parseLengthComponent(_ component: String) -> [Int] {
+        if let int = Int(component) {
+            return [int]
+        } else {
+            let trimmedComponent = component.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+            let rangeLimits = trimmedComponent.components(separatedBy: "-").compactMap { Int($0) }
+
+            guard rangeLimits.count == 2,
+                let rangeStart = rangeLimits.first,
+                let rangeEnd = rangeLimits.last
+                else { return [] }
+
+            return Array(rangeStart...rangeEnd)
+        }
     }
 
     public func exampleNumber(forCountry country: String, phoneNumberType: PhoneNumberType) -> String? {
