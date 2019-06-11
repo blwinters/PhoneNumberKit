@@ -41,8 +41,11 @@ extension PhoneNumber : Equatable {
 
 extension PhoneNumber : Hashable {
 
-    public var hashValue: Int {
-        return countryCode.hashValue ^ nationalNumber.hashValue ^ leadingZero.hashValue ^ (numberExtension?.hashValue ?? 0)
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(countryCode.hashValue)
+        hasher.combine(nationalNumber.hashValue)
+        hasher.combine(leadingZero.hashValue)
+        hasher.combine((numberExtension?.hashValue ?? 0))
     }
 
 }
